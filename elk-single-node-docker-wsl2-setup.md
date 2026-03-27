@@ -148,6 +148,45 @@ mkdir -p ~/ELK
 
 ## Step 5: Reset Passwords
 
+### Why are there two different accounts?
+
+This is a very common question. We set passwords for **two different accounts** — and they serve completely different purposes.
+
+Think of it like a school building:
+
+| Account | Role | Who uses it |
+|---|---|---|
+| `elastic` | The **Principal** — full access to everything | You (human) — to log into Kibana browser UI and query Elasticsearch directly |
+| `kibana_system` | The **Office Computer Login** — limited, specific access | The Kibana container itself (machine-to-machine, invisible to you) |
+
+Here is the full picture of how they are used:
+
+```
+YOU (open browser)
+        |
+        |  Login: elastic + 5a-password
+        v
+  +------------+
+  |   Kibana   |   ← you see and interact with this
+  +------------+
+        |
+        |  Internal connection: kibana_system + 5b-password
+        |  (Kibana does this automatically — you never type this)
+        v
+  +-------------------+
+  |  Elasticsearch    |
+  +-------------------+
+```
+
+- **`elastic`** is the superuser (admin). You use this to log into the Kibana browser UI and to run `curl` commands directly against Elasticsearch.
+- **`kibana_system`** is a restricted service account. Kibana uses it behind the scenes to read/write data in Elasticsearch. It has only the permissions Kibana needs — it **cannot** be used to log into the Kibana UI.
+
+> This follows a security principle called **Least Privilege** — give each account only what it needs to do its job, nothing more. If the `kibana_system` account were ever compromised, the attacker could not log in as admin.
+
+**The passwords will be different** — that is intentional and correct.
+
+---
+
 ### 5a. Reset the `elastic` superuser password
 
 ```bash
@@ -163,6 +202,8 @@ echo "y" | docker exec -i es01 \
 
 **Save the password it prints!** It looks like: `WzHN65Wf6V9P*p7rt6Cd`
 
+You will use this password to log into Kibana at `http://localhost:5601`.
+
 ### 5b. Reset the `kibana_system` password
 
 ```bash
@@ -171,7 +212,9 @@ echo "y" | docker exec -i es01 \
   -u kibana_system -s
 ```
 
-This is the internal account Kibana uses to connect to Elasticsearch. Save this password too.
+**Save this password too.** You will paste it into the `docker run` command for Kibana in Step 6 — Kibana will use it automatically to connect to Elasticsearch. You will never type it into a browser.
+
+> Two accounts. Two passwords. One for you to login. One for Kibana to connect internally. Both are needed.
 
 ---
 
