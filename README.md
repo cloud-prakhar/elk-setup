@@ -49,6 +49,29 @@ A complete guide to stop, remove, and clean up every trace of ELK Stack from you
 
 ---
 
+### 3. [Integrating a Docker App with ELK — Log Shipping & Kibana Views](https://github.com/cloud-prakhar/elk-setup/blob/main/elk-app-log-integration.md)
+
+**File:** `elk-app-log-integration.md`
+
+A practical end-to-end guide showing how to connect a real Docker app (Flask) to the running ELK stack so its logs flow into Elasticsearch and become searchable in Kibana. Includes Kibana Data Views, search queries, and dashboard creation.
+
+**What's inside:**
+- How the full pipeline works: App → Filebeat → Logstash → Elasticsearch → Kibana (with diagram)
+- Step 1: Copy the CA cert into your app project
+- Step 2: `.env` file for credentials (and why not to commit it)
+- Step 3: `docker-compose.yml` explained line-by-line (no embedded ES/Kibana — uses external stack)
+- Step 4: `filebeat.yml` explained — Docker autodiscovery via container labels
+- Step 5: `logstash.conf` explained — JSON parsing, field renaming, daily index output
+- Step 6: Start the app stack and verify all 5 containers are running
+- Step 7: Generate logs by hitting app endpoints
+- Step 8: Verify logs reached Elasticsearch (`_cat/indices`)
+- Step 9: Create a Kibana Data View and search in Discover
+- KQL and Lucene search query examples
+- Step 10: Build a simple dashboard (log count over time + log level pie chart)
+- Troubleshooting: 401 errors, missing logs, network issues, Kibana showing no data
+
+---
+
 ## Stack Details
 
 | Component | Container | Port | URL |

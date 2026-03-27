@@ -200,7 +200,7 @@ echo "y" | docker exec -i es01 \
 - `elasticsearch-reset-password -u elastic` = reset the password for the built-in admin user called `elastic`
 - `-s` = "silent" — only print the password, nothing else
 
-**Save the password it prints!** It looks like: `WzHN65Wf6V9P*p7rt6Cd`
+**Save the password it prints!** It looks like: `xK9mP2vQ8nRjL5wA3cYt` (yours will be different — copy it exactly)
 
 You will use this password to log into Kibana at `http://localhost:5601`.
 
