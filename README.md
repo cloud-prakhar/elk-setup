@@ -24,7 +24,8 @@ A beginner-friendly, step-by-step guide to install and run a single-node ELK Sta
 - Step 7: Verify and open Kibana — your single view
 - Complete quick-start shell script
 - How to stop and restart the stack
-- 8 troubleshooting scenarios with fixes (WSL2-specific issues included)
+- 9 troubleshooting scenarios with fixes (WSL2-specific issues included)
+  - Includes: Stack Monitoring "missing encryption key" error fix
 - Useful commands cheat sheet
 
 ---

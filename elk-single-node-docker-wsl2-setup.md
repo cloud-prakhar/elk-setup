@@ -515,6 +515,57 @@ This happens when Kibana starts without connection settings. Make sure you used 
 
 ---
 
+### Problem 9: Stack Monitoring shows "Unable to create alerts client — missing encryption key"
+
+**Full error:**
+```
+Unable to create alerts client because the Encrypted Saved Objects plugin is missing encryption key.
+Please set xpack.encryptedSavedObjects.encryptionKey in the kibana.yml or use the bin/kibana-encryption-keys command.
+```
+
+**Cause:** Kibana's alerting and Stack Monitoring features require an encryption key to securely store saved alert configurations. Without it, Kibana cannot initialise the alerts client.
+
+**Fix: Add the encryption key as an environment variable when starting Kibana**
+
+**Step 1: Generate a secure key (run this in your terminal):**
+```bash
+openssl rand -base64 32
+```
+Copy the output — it will look like: `K9mP2vQ8nRjL5wA3cYtXbF7eH1sN4uWd` (yours will be different).
+
+**Step 2: Stop and remove the existing Kibana container:**
+```bash
+docker stop kib01
+docker rm kib01
+```
+
+**Step 3: Recreate Kibana with the encryption key added:**
+```bash
+docker run -d \
+  --name kib01 \
+  --net elastic \
+  -p 5601:5601 \
+  -v ~/ELK/http_ca.crt:/usr/share/kibana/config/certs/http_ca.crt \
+  -e ELASTICSEARCH_HOSTS=https://es01:9200 \
+  -e ELASTICSEARCH_USERNAME=kibana_system \
+  -e ELASTICSEARCH_PASSWORD="<your-kibana-system-password>" \
+  -e ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/kibana/config/certs/http_ca.crt \
+  -e ELASTICSEARCH_SSL_VERIFICATIONMODE=none \
+  -e XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY="<your-generated-key>" \
+  docker.elastic.co/kibana/kibana:9.3.2
+```
+
+> Replace `<your-generated-key>` with the output from Step 1. The key must be **at least 32 characters** long.
+
+**Important:** Once set, do not change this key. All previously saved alert/rule configurations are encrypted with it. Changing the key will make existing saved objects unreadable.
+
+**Verify the fix:**
+1. Wait 30–60 seconds for Kibana to restart
+2. Open `http://localhost:5601`
+3. Go to **Management → Stack Monitoring** — the error should be gone
+
+---
+
 ## Useful Commands Cheat Sheet
 
 ```bash
