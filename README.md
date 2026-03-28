@@ -72,6 +72,26 @@ A practical end-to-end guide showing how to connect a real Docker app (Flask) to
 
 ---
 
+### 4. [Kibana Sample Queries — KQL, Dev Tools, and Saved Searches](https://github.com/cloud-prakhar/elk-setup/blob/main/elk-kibana-sample-queries.md)
+
+**File:** `elk-kibana-sample-queries.md`
+
+A ready-to-use query reference for exploring logs in Kibana and Elasticsearch. Generic queries that work across any application sending structured JSON logs to this ELK stack — use with demo-app, notes-app, or your own apps.
+
+**What's inside:**
+- KQL queries: filter by log level, endpoint, status code, duration, request_id
+- Boolean combinations: AND, OR, NOT, range filters
+- Dev Tools (Elasticsearch DSL): count, search, aggregations, date histograms
+- Aggregation recipes: log level distribution, average response time per endpoint, error rate over time
+- Request tracing queries using `request_id`
+- Cluster and index health checks
+- Saved search suggestions for Kibana Discover
+- Dashboard filter reference
+- Troubleshooting queries (empty index, wrong timestamp, missing fields)
+- Quick reference card
+
+---
+
 ## Stack Details
 
 | Component | Container | Port | URL |
