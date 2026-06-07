@@ -47,7 +47,8 @@ Use the time picker (top-right) for UI-based time filtering. KQL itself doesn't 
 endpoint: "/health"
 
 # All note-related endpoints
-endpoint: "/notes*"
+# NOTE: wildcards must be OUTSIDE quotes in KQL — a "*" inside quotes is matched literally
+endpoint: /notes*
 
 # Exclude health checks
 not endpoint: "/health"
@@ -107,8 +108,8 @@ message: "note created"
 # Contains any of these words
 message: "error" or message: "failed"
 
-# Wildcard (use sparingly — can be slow)
-message: "rate*"
+# Wildcard (use sparingly — can be slow). Wildcard stays OUTSIDE the quotes.
+message: rate*
 ```
 
 ### Combine Conditions
@@ -357,7 +358,191 @@ GET /_cat/shards?v
 
 ---
 
-## Part 3 — Discover Saved Searches (KQL + Columns)
+## Part 3 — CRUD Operations (Create, Read, Update, Delete)
+
+Run all of these in **Dev Tools → Console**. They are also shown as `curl` so you can run them from a terminal — replace the connection bits with your own:
+
+```bash
+# curl template (run from the host where you saved http_ca.crt)
+curl --cacert ~/ELK/http_ca.crt -u elastic:<your-elastic-password> \
+  -H 'Content-Type: application/json' \
+  -X<METHOD> "https://localhost:9200/<path>" -d '<json-body>'
+```
+
+> **HTTP verb → Elasticsearch operation**
+>
+> | Verb | Used for | Example endpoint |
+> |---|---|---|
+> | `GET` | Read documents / search / metadata | `GET /index/_doc/1`, `GET /index/_search` |
+> | `POST` | Create (auto-ID), partial/scripted **update**, bulk, by-query ops | `POST /index/_doc`, `POST /index/_update/1` |
+> | `PUT` | Create an index, or create/replace a document at a **known ID** | `PUT /index`, `PUT /index/_doc/1` |
+> | `PATCH` | **Not supported by Elasticsearch.** Use `POST /index/_update/<id>` for partial updates (see below) |
+> | `DELETE` | Delete a document or an entire index | `DELETE /index/_doc/1`, `DELETE /index` |
+>
+> Elasticsearch's REST API does not implement the HTTP `PATCH` verb. The "patch a document" operation is done with `POST .../_update/<id>` and a partial `doc`. Sending an actual `PATCH` request returns `405 Method Not Allowed`.
+
+### Create an index (PUT)
+
+```json
+// Create an index with explicit settings + field mappings
+PUT /sample-index
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      "name":       {"type": "text"},
+      "level":      {"type": "keyword"},
+      "age":        {"type": "integer"},
+      "created_at": {"type": "date"}
+    }
+  }
+}
+
+// Create a bare index (mappings auto-detected on first write)
+PUT /sample-index
+```
+
+### Add data — index documents (POST / PUT)
+
+```json
+// POST = create with an auto-generated _id (good for logs/events)
+POST /sample-index/_doc
+{
+  "name": "Alice",
+  "level": "INFO",
+  "age": 30,
+  "created_at": "2026-06-07T10:00:00"
+}
+
+// PUT = create OR replace a document at a known _id (here, id = 1)
+PUT /sample-index/_doc/1
+{
+  "name": "Bob",
+  "level": "ERROR",
+  "age": 45,
+  "created_at": "2026-06-07T10:05:00"
+}
+
+// PUT _create = create only — fails with 409 if the _id already exists
+PUT /sample-index/_create/2
+{
+  "name": "Carol",
+  "level": "WARNING",
+  "age": 25
+}
+
+// Bulk insert many documents in one request (note the newline-delimited format)
+POST /_bulk
+{"index": {"_index": "sample-index", "_id": "3"}}
+{"name": "Dave", "level": "INFO", "age": 52}
+{"index": {"_index": "sample-index", "_id": "4"}}
+{"name": "Eve", "level": "ERROR", "age": 19}
+```
+
+> The `_bulk` body must end with a trailing newline, and each action line is followed by its source line. In Dev Tools the Console handles this for you.
+
+### Retrieve data (GET)
+
+```json
+// Get a single document by _id
+GET /sample-index/_doc/1
+
+// Get only specific fields of a document
+GET /sample-index/_doc/1?_source=name,level
+
+// Check whether a document exists (returns 200 / 404, no body)
+HEAD /sample-index/_doc/1
+
+// Get many documents by _id in one call
+GET /sample-index/_mget
+{
+  "ids": ["1", "2", "3"]
+}
+
+// Search all documents
+GET /sample-index/_search
+{
+  "query": {"match_all": {}}
+}
+
+// Count documents matching a query
+GET /sample-index/_count
+{
+  "query": {"term": {"level": "ERROR"}}
+}
+```
+
+### Update / patch data (POST `_update`)
+
+```json
+// Partial update — change only the listed fields (this is the "PATCH")
+POST /sample-index/_update/1
+{
+  "doc": {
+    "age": 46,
+    "level": "CRITICAL"
+  }
+}
+
+// Scripted update — modify a field based on its current value
+POST /sample-index/_update/1
+{
+  "script": {
+    "source": "ctx._source.age += params.n",
+    "params": {"n": 1}
+  }
+}
+
+// Upsert — update if it exists, otherwise insert the "upsert" body
+POST /sample-index/_update/99
+{
+  "doc": {"level": "INFO"},
+  "doc_as_upsert": true
+}
+
+// Full replace of a document at a known _id (overwrites ALL fields)
+PUT /sample-index/_doc/1
+{
+  "name": "Bob",
+  "level": "INFO",
+  "age": 50
+}
+
+// Update many documents matching a query
+POST /sample-index/_update_by_query
+{
+  "query": {"term": {"level": "ERROR"}},
+  "script": {"source": "ctx._source.level = 'FATAL'"}
+}
+```
+
+### Delete data (DELETE / POST `_delete_by_query`)
+
+```json
+// Delete a single document by _id
+DELETE /sample-index/_doc/2
+
+// Delete all documents matching a query (keeps the index)
+POST /sample-index/_delete_by_query
+{
+  "query": {"range": {"age": {"lt": 20}}}
+}
+
+// Delete an entire index (irreversible — removes data, mapping, settings)
+DELETE /sample-index
+
+// Delete every index matching a pattern (irreversible)
+DELETE /sample-index-*
+```
+
+> **Warning:** `DELETE /index` and `_delete_by_query` cannot be undone. Never run `DELETE` against `flask-app-*` / `notes-app-*` (your real log indices) unless you intend to wipe them. Avoid `DELETE /*` entirely — it can destroy Kibana's own system indices.
+
+---
+
+## Part 4 — Discover Saved Searches (KQL + Columns)
 
 Create these saved searches in Kibana Discover for quick access:
 
@@ -383,7 +568,7 @@ Create these saved searches in Kibana Discover for quick access:
 
 ---
 
-## Part 4 — Dashboard KQL Filters
+## Part 5 — Dashboard KQL Filters
 
 Apply these in dashboards using the **Add filter** button (below the search bar) for panel-level filtering:
 
@@ -396,7 +581,7 @@ Apply these in dashboards using the **Add filter** button (below the search bar)
 
 ---
 
-## Part 5 — Common Troubleshooting Queries
+## Part 6 — Common Troubleshooting Queries
 
 ### "Why is the index empty?"
 ```json
@@ -460,4 +645,15 @@ duration_ms > 100                   GET /_cluster/health
 request_id: "abc12345"
 endpoint: "/notes"
 app_name: "notes-app"
+
+CRUD (Dev Tools)
+─────────────────────────────────────────────
+PUT    /index                  create index
+POST   /index/_doc             add doc (auto id)
+PUT    /index/_doc/1           add/replace doc (id=1)
+GET    /index/_doc/1           read doc
+GET    /index/_search          read many
+POST   /index/_update/1        patch doc (partial)
+DELETE /index/_doc/1           delete doc
+DELETE /index                  delete index
 ```

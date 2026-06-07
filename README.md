@@ -93,6 +93,24 @@ A ready-to-use query reference for exploring logs in Kibana and Elasticsearch. G
 
 ---
 
+### 5. [curl Operations with Password and API Key Auth](https://github.com/cloud-prakhar/elk-setup/blob/main/elk-curl-auth-operations.md)
+
+**File:** `elk-curl-auth-operations.md`
+
+A command-line companion to the Kibana query guide: how to run Elasticsearch operations with **curl** using two authentication methods side by side — the `elastic` **password** (basic auth) and scoped **API keys**. Every operation is shown with both methods so you can copy whichever fits.
+
+**What's inside:**
+- Password vs API key: when to use which (scope, revoking, expiry, blast radius)
+- Shared `curl` variables setup (`--cacert`, host, auth)
+- Creating, listing, and invalidating scoped API keys (with `role_descriptors`)
+- Every CRUD + search operation shown twice: once with `-u elastic:pass`, once with `Authorization: ApiKey`
+- Index create (PUT), add data (POST/PUT), bulk insert (`--data-binary` + ndjson), read (GET), update/patch (`_update`), delete (DELETE / `_delete_by_query`)
+- Copy/paste end-to-end smoke test that cleans up after itself
+- HTTP verb quick reference (and why Elasticsearch has no `PATCH`)
+- Troubleshooting table (SSL, 401, 403, 406, bulk errors) and security notes
+
+---
+
 ## Stack Details
 
 | Component | Container | Port | URL |
