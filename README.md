@@ -111,11 +111,33 @@ A command-line companion to the Kibana query guide: how to run Elasticsearch ope
 
 ---
 
+### 6. [Linux & Windows Server Monitoring — System-Level Logging](https://github.com/cloud-prakhar/elk-setup/blob/main/elk-system-log-monitoring.md)
+
+**File:** `elk-system-log-monitoring.md`
+
+A guide to monitoring **operating systems** (not just apps) with the same WSL2 ELK stack. Filebeat runs as a service directly on each Linux/Windows server, ships OS logs to a central Logstash receiver, and lands them in per-OS daily indices.
+
+**What's inside:**
+- Pipeline diagram: OS log sources → Filebeat (host agent) → Logstash → Elasticsearch → Kibana
+- Prerequisites: cert, password, and the WSL2 networking piece (`netsh portproxy`, firewall rule, mirrored networking mode)
+- Part A: Central `logstash-sys` container — full annotated `logstash.conf` with grok for syslog, Windows event-ID mapping, tag-based routing, and per-OS daily indices
+- Part B: Linux — Filebeat install (apt/yum), full `filebeat.yml` for `syslog`, `auth.log`, `kern.log`, journald, multiline; processors, `test config` / `test output`, systemd service
+- Part C: Windows — Filebeat install as a service, full `filebeat.yml` using the `winlog` input for Security/System/Application channels, event-ID allow-lists, optional IIS and PowerShell logging
+- Part D: Verifying data reached Elasticsearch and checking for grok parse failures
+- Part E: Kibana Data Views, KQL queries (failed SSH logins, sudo use, event 4625/4720/4740/1102), starter dashboard, alert rule
+- Index growth control: ILM policy + index template for 7-day retention
+- Troubleshooting table (connectivity, 401, wrong timezone, empty Security channel, disk growth)
+- Optional: adding CPU/memory/disk metrics with Metricbeat
+- Quick reference: commands and component/port/config-file tables
+
+---
+
 ## Stack Details
 
 | Component | Container | Port | URL |
 |---|---|---|---|
 | Elasticsearch | `es01` | `9200` | `https://localhost:9200` |
 | Kibana | `kib01` | `5601` | `http://localhost:5601` |
+| Logstash (system logs) | `logstash-sys` | `5044` | Beats input — see guide 6 |
 
 **Login:** `elastic` / *(password set during setup — see Step 5 of the setup guide)*
